@@ -5,13 +5,9 @@
 
 import { expect, test, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
-import { config } from 'dotenv'
+import { serviceDiProva, urlDiProva } from '../tests/progetto-di-prova'
 
-config({ path: '.env.local', quiet: true })
-
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const service = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const admin = createClient(url, service, { auth: { persistSession: false } })
+const admin = createClient(urlDiProva, serviceDiProva, { auth: { persistSession: false } })
 
 const PASSWORD = 'prova-1234'
 const emailTecnico = 'e2e-tecnico@esempio.test'

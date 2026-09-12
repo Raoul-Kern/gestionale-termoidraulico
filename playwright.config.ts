@@ -1,4 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
+import { config } from 'dotenv'
+
+// Prima che i file di test vengano importati: leggono le variabili al
+// caricamento e si fermano se mancano.
+config({ path: '.env.local', quiet: true })
 
 export default defineConfig({
   testDir: './e2e',

@@ -42,3 +42,7 @@ next-env.d.ts
 
 # prototipo statico, non fa parte dell applicazione
 /prototipo/.vercel
+
+# Playwright
+/test-results/
+/playwright-report/

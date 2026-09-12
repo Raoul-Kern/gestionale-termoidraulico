@@ -6,10 +6,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { beforeAll, describe, expect, it } from 'vitest'
 import type { Database } from '@/lib/supabase/tipi'
-
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const service = process.env.SUPABASE_SERVICE_ROLE_KEY!
+import { anonDiProva as anon, serviceDiProva as service, urlDiProva as url } from './progetto-di-prova'
 
 const admin = createClient<Database>(url, service, { auth: { persistSession: false } })
 

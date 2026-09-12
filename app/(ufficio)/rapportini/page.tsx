@@ -3,6 +3,7 @@ import { richiediRuolo } from '@/lib/sessione'
 import { clientServer } from '@/lib/supabase/server'
 import { calcolaTotali, formattaEuro, formattaOre } from '@/lib/calcoli'
 import { AscoltaRapportini } from '@/components/ufficio/AscoltaRapportini'
+import { dataDiOggi } from '@/lib/data'
 
 const STATI = ['da_fatturare', 'fatturato', 'non_fatturabile'] as const
 type Stato = (typeof STATI)[number]
@@ -25,7 +26,7 @@ export default async function Rapportini({
     ? (parametri.stato as Stato)
     : 'da_fatturare'
 
-  const oggi = new Date().toISOString().slice(0, 10)
+  const oggi = dataDiOggi()
   const dal = parametri.dal ?? `${oggi.slice(0, 4)}-01-01`
   const al = parametri.al ?? oggi
 

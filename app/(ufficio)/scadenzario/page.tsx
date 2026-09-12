@@ -1,6 +1,7 @@
 import { richiediRuolo } from '@/lib/sessione'
 import { clientServer } from '@/lib/supabase/server'
 import { statoScadenza } from '@/lib/calcoli'
+import { dataDiOggi } from '@/lib/data'
 import { BadgeScadenza } from '@/components/ufficio/BadgeScadenza'
 import { registraManutenzione } from './azioni'
 
@@ -72,7 +73,7 @@ export default async function Scadenzario() {
             {impianti.map((impianto) => {
               async function registraOggi() {
                 'use server'
-                await registraManutenzione(impianto.id, new Date().toISOString().slice(0, 10))
+                await registraManutenzione(impianto.id, dataDiOggi())
               }
 
               return (

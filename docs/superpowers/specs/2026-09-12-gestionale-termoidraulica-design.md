@@ -43,8 +43,20 @@ ruolo sta in `utenti.ruolo` ed è leggibile dalle policy tramite una funzione
 ma è una comodità di navigazione, non una barriera di sicurezza.
 
 I costi (tariffa di costo del tecnico, prezzo di acquisto dei materiali) stanno in
-colonne distinte dai prezzi di vendita. Le policy per il ruolo `tecnico` e
-`ufficio` non espongono quelle colonne: il margine è visibile solo al titolare.
+colonne distinte dai prezzi di vendita, e restano leggibili solo al titolare.
+
+Il meccanismo va scelto con attenzione, perché quello che viene in mente per primo
+non funziona: in Postgres un `REVOKE SELECT (colonna)` non toglie niente a un ruolo
+che ha già `SELECT` su tutta la tabella, e Supabase concede esattamente quel
+privilegio al ruolo `authenticated`. Le colonne di costo si nascondono quindi
+revocando `SELECT` sulla tabella e riconcedendolo solo sulle colonne ammesse.
+
+Da qui segue una conseguenza che vale registrare: `authenticated` è un ruolo
+Postgres, mentre tecnico, ufficio e titolare sono valori di una colonna. La
+revoca vale quindi anche per il titolare. Ogni lettura di costi passa da una
+funzione `security definer` che controlla il ruolo — `margini()` per gli
+interventi, `listino_con_costi()` per il listino — e nessuna query
+dell'applicazione chiede mai una colonna di costo direttamente.
 
 ## Modello dati
 
@@ -63,10 +75,14 @@ Ogni tabella ha `id uuid`, `creato_il`, `aggiornato_il`.
   (default 12), `prossima_manutenzione` colonna generata, `attivo`.
 - **materiali** — listino. `codice`, `descrizione`, `unita`, `prezzo_acquisto`,
   `prezzo_vendita`, `attivo`.
-- **interventi** — il lavoro programmato. `cliente_id`, `sede_id`, `tecnico_id`,
-  `data`, `ora_inizio`, `durata_prevista_minuti`, `descrizione`, `priorita`
+- **interventi** — il lavoro programmato. `sede_id`, `tecnico_id`, `data`,
+  `ora_inizio`, `durata_prevista_minuti`, `descrizione`, `priorita`
   (`bassa|normale|urgente`), `stato` (`programmato|in_corso|chiuso|annullato`),
-  `impianto_id` opzionale.
+  `impianto_id` opzionale. Nessun `cliente_id`: il cliente si ricava dalla sede.
+  Tenere entrambi i riferimenti permetterebbe di agganciare la sede di un cliente
+  a un altro, e non esiste un vincolo semplice che lo impedisca. Per lo stesso
+  motivo `impianto_id` è una chiave esterna composta `(sede_id, impianto_id)`
+  verso `impianti`: un impianto di un'altra sede non è indicabile.
 - **rapportini** — uno per intervento chiuso. `intervento_id` unico, `tecnico_id`,
   `note`, `firma_url`, `firmatario`, `chiuso_il`, `stato_fatturazione`
   (`da_fatturare|fatturato|non_fatturabile`). Non contiene importi: i prezzi
@@ -133,7 +149,13 @@ cliente è disponibile dallo stesso dialog.
 cliente, data, tecnico e totale. Il dettaglio mostra il calcolo riga per riga:
 somma delle ore per tariffa, somma dei materiali, totale intervento. Il pulsante
 di export produce un PDF riassuntivo per il cliente e un CSV per il
-commercialista, e marca il rapportino come `fatturato`.
+commercialista.
+
+L'export non cambia lo stato del rapportino. Sono operazioni del browser: una
+stampa si annulla, un download si interrompe, e un rapportino marcato `fatturato`
+senza che la fattura esista è un lavoro che nessuno rifattura più. Lo stato passa
+a `fatturato` solo con un'azione esplicita dell'ufficio, dopo che il
+commercialista ha emesso.
 
 ### Scadenzario (ufficio)
 
@@ -164,6 +186,17 @@ margine           = totale_intervento − costo_ore − costo_materiali
 Gli importi si arrotondano a due decimali solo in presentazione. In database gli
 importi sono `numeric(10,2)` e le quantità `numeric(10,3)`.
 
+Ogni colonna di prezzo e di costo, sia nel listino sia nelle righe congelate, ha
+`CHECK (valore >= 0)`. Lo zero è ammesso — il modello usa già `default 0` — il
+negativo no: un prezzo negativo entrato in una riga congelata falsa ricavo e
+margine per sempre, e nessuna schermata lo mostrerebbe come errore.
+
+Il margine è affidabile solo se i costi ci sono. Quando un tecnico ha
+`tariffa_costo_oraria` a zero, il margine del suo intervento risulta pari al
+ricavo: la dashboard lo marca come incompleto invece di sommarlo come fosse un
+dato. La chiusura del rapportino resta possibile: fermare un tecnico in cantiere
+perché in anagrafica manca un campo è peggio del dato incompleto.
+
 ## Errori
 
 - **Invio rapportino senza rete.** La bozza resta in IndexedDB, la schermata
@@ -171,6 +204,12 @@ importi sono `numeric(10,2)` e le quantità `numeric(10,3)`.
   perso, nessuna schermata di errore bloccante.
 - **Doppio invio.** `intervento_id` è unico su `rapportini`; un secondo invio
   della stessa bozza aggiorna invece di duplicare.
+- **Reinvio di una bozza vecchia.** Il vincolo unico protegge dal doppione, non
+  dal sorpasso: una bozza rimasta in coda per giorni non deve sovrascrivere un
+  rapportino già corretto dall'ufficio. La bozza porta con sé l'orario del suo
+  ultimo salvataggio, e la chiusura rifiuta l'aggiornamento se il rapportino sul
+  server è stato modificato dopo. Il tecnico vede il rifiuto e sa che l'ufficio
+  ha già messo mano.
 - **Firma mancante.** Consentita, ma il rapportino resta marcato come non
   firmato e l'ufficio lo vede segnalato: bloccare il tecnico in cantiere è peggio.
 - **Cliente non in anagrafica.** Creazione rapida dal rapportino con sola

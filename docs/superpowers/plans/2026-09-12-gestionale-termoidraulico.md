@@ -15,7 +15,9 @@
 - Nomi di tabelle, colonne, tipi enum e valori enum in italiano. Nessun `created_at`: `creato_il`, `aggiornato_il`.
 - Importi `numeric(10,2)`, quantità `numeric(10,3)`. Arrotondamento a due decimali solo in presentazione.
 - Le righe `rapportino_ore` e `rapportino_materiali` copiano prezzo di vendita e costo. `materiale_id` non è la fonte del prezzo.
-- Le colonne di costo (`tariffa_costo_oraria`, `prezzo_acquisto`, `costo_orario`) sono leggibili solo dal ruolo `titolare`.
+- Ogni colonna di prezzo e di costo ha `check (valore >= 0)`: lo zero è ammesso, il negativo no.
+- Le colonne di costo (`tariffa_costo_oraria`, `prezzo_acquisto`, `costo_orario`) sono leggibili solo dal ruolo `titolare`. Il meccanismo è `revoke select` sulla tabella più `grant select (colonne ammesse)`: un `revoke` di sola colonna non toglie nulla a un ruolo che ha `select` sull'intera tabella, ed è ciò che Supabase concede a `authenticated`.
+- `interventi` non ha `cliente_id`: il cliente si ricava da `sede_id`. `impianto_id` è vincolato alla stessa sede da una chiave esterna composta.
 - `prossima_manutenzione` è una colonna generata dal database, mai calcolata nell'applicazione.
 - `rapportini.intervento_id` è UNIQUE: la chiusura del rapportino deve essere idempotente.
 - Ogni task finisce con un commit. Messaggi di commit in inglese, Conventional Commits.
@@ -210,7 +212,8 @@ create table utenti (
   id uuid primary key references auth.users (id) on delete cascade,
   nome text not null,
   ruolo ruolo_utente not null default 'tecnico',
-  tariffa_costo_oraria numeric(10,2) not null default 0,
+  tariffa_costo_oraria numeric(10,2) not null default 0
+    check (tariffa_costo_oraria >= 0),
   colore text not null default '#2563eb',
   attivo boolean not null default true,
   creato_il timestamptz not null default now(),
@@ -255,7 +258,10 @@ create table impianti (
   ) stored,
   attivo boolean not null default true,
   creato_il timestamptz not null default now(),
-  aggiornato_il timestamptz not null default now()
+  aggiornato_il timestamptz not null default now(),
+  -- Bersaglio della chiave esterna composta di interventi: lega l'impianto
+  -- alla sua sede, così un intervento non può puntare all'impianto di un altro.
+  unique (sede_id, id)
 );
 
 create table materiali (
@@ -263,18 +269,19 @@ create table materiali (
   codice text not null unique,
   descrizione text not null,
   unita text not null default 'pz',
-  prezzo_acquisto numeric(10,2) not null default 0,
-  prezzo_vendita numeric(10,2) not null default 0,
+  prezzo_acquisto numeric(10,2) not null default 0 check (prezzo_acquisto >= 0),
+  prezzo_vendita numeric(10,2) not null default 0 check (prezzo_vendita >= 0),
   attivo boolean not null default true,
   creato_il timestamptz not null default now(),
   aggiornato_il timestamptz not null default now()
 );
 
+-- Nessun cliente_id: il cliente si ricava dalla sede. Tenere entrambi i
+-- riferimenti permetterebbe di associare la sede di un cliente a un altro.
 create table interventi (
   id uuid primary key default gen_random_uuid(),
-  cliente_id uuid not null references clienti (id) on delete restrict,
   sede_id uuid not null references sedi (id) on delete restrict,
-  impianto_id uuid references impianti (id) on delete set null,
+  impianto_id uuid,
   tecnico_id uuid references utenti (id) on delete set null,
   data date not null,
   ora_inizio time,
@@ -283,7 +290,13 @@ create table interventi (
   priorita priorita_intervento not null default 'normale',
   stato stato_intervento not null default 'programmato',
   creato_il timestamptz not null default now(),
-  aggiornato_il timestamptz not null default now()
+  aggiornato_il timestamptz not null default now(),
+  -- L'impianto deve appartenere alla sede dell'intervento. Con impianto_id
+  -- nullo il vincolo non si applica (MATCH SIMPLE). Gli impianti si dismettono
+  -- con attivo = false, non si cancellano: da qui il restrict.
+  constraint interventi_impianto_della_sede
+    foreign key (sede_id, impianto_id) references impianti (sede_id, id)
+    on delete restrict
 );
 
 create table rapportini (
@@ -304,8 +317,8 @@ create table rapportino_ore (
   rapportino_id uuid not null references rapportini (id) on delete cascade,
   tipo tipo_ora not null,
   minuti integer not null check (minuti > 0),
-  prezzo_orario numeric(10,2) not null,
-  costo_orario numeric(10,2) not null default 0,
+  prezzo_orario numeric(10,2) not null check (prezzo_orario >= 0),
+  costo_orario numeric(10,2) not null default 0 check (costo_orario >= 0),
   creato_il timestamptz not null default now()
 );
 
@@ -315,16 +328,16 @@ create table rapportino_materiali (
   materiale_id uuid references materiali (id) on delete set null,
   descrizione text not null,
   quantita numeric(10,3) not null check (quantita > 0),
-  prezzo_vendita numeric(10,2) not null,
-  prezzo_acquisto numeric(10,2) not null default 0,
+  prezzo_vendita numeric(10,2) not null check (prezzo_vendita >= 0),
+  prezzo_acquisto numeric(10,2) not null default 0 check (prezzo_acquisto >= 0),
   creato_il timestamptz not null default now()
 );
 
 create table impostazioni (
   id boolean primary key default true check (id),
-  prezzo_ora_ordinaria numeric(10,2) not null default 40,
-  prezzo_ora_viaggio numeric(10,2) not null default 30,
-  prezzo_ora_urgenza numeric(10,2) not null default 60,
+  prezzo_ora_ordinaria numeric(10,2) not null default 40 check (prezzo_ora_ordinaria >= 0),
+  prezzo_ora_viaggio numeric(10,2) not null default 30 check (prezzo_ora_viaggio >= 0),
+  prezzo_ora_urgenza numeric(10,2) not null default 60 check (prezzo_ora_urgenza >= 0),
   aggiornato_il timestamptz not null default now()
 );
 
@@ -384,7 +397,36 @@ npx supabase db execute --sql "
 
 Expected: `prossima_manutenzione` = `2027-01-15`.
 
-- [ ] **Step 5: Verificare il vincolo di idempotenza**
+- [ ] **Step 5: Verificare i vincoli su prezzi e relazioni**
+
+Run:
+
+```bash
+npx supabase db execute --sql "
+  insert into materiali (codice, descrizione, prezzo_vendita)
+  values ('NEG-1', 'Prezzo negativo', -1);
+"
+```
+
+Expected: errore `violates check constraint "materiali_prezzo_vendita_check"`.
+
+Run:
+
+```bash
+npx supabase db execute --sql "
+  with ca as (insert into clienti (ragione_sociale) values ('Cliente A') returning id),
+       cb as (insert into clienti (ragione_sociale) values ('Cliente B') returning id),
+       sa as (insert into sedi (cliente_id, indirizzo) select id, 'Via A 1' from ca returning id),
+       sb as (insert into sedi (cliente_id, indirizzo) select id, 'Via B 2' from cb returning id),
+       ia as (insert into impianti (sede_id, tipo) select id, 'caldaia' from sa returning id)
+  insert into interventi (sede_id, impianto_id, data, descrizione)
+  select sb.id, ia.id, current_date, 'Impianto di un altra sede' from sb, ia;
+"
+```
+
+Expected: errore `violates foreign key constraint "interventi_impianto_della_sede"` — l'impianto di una sede non è indicabile da un intervento su un'altra.
+
+- [ ] **Step 6: Verificare il vincolo di idempotenza**
 
 Run:
 
@@ -397,7 +439,7 @@ npx supabase db execute --sql "
 
 Expected: una riga, il vincolo unique su `intervento_id`.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add supabase
@@ -524,13 +566,59 @@ create policy materiali_righe_scrittura on rapportino_materiali for all
       and (ruolo_corrente() in ('ufficio', 'titolare') or r.tecnico_id = auth.uid())
   ));
 
--- Le colonne di costo restano leggibili solo al titolare.
--- Postgres non filtra per colonna nelle policy, quindi si revoca l accesso
--- diretto alle colonne sensibili e si espone il margine via vista dedicata.
-revoke select (tariffa_costo_oraria) on utenti from authenticated;
-revoke select (prezzo_acquisto) on materiali from authenticated;
-revoke select (costo_orario) on rapportino_ore from authenticated;
-revoke select (prezzo_acquisto) on rapportino_materiali from authenticated;
+-- Le colonne di costo restano leggibili solo al titolare. Le policy RLS
+-- filtrano righe, non colonne, quindi il filtro va fatto con i privilegi.
+--
+-- Attenzione al modo: un "revoke select (colonna)" non toglie niente a un ruolo
+-- che ha già select sull'intera tabella, ed è esattamente quello che Supabase
+-- concede ad anon e authenticated. Va quindi revocato il privilegio di tabella
+-- e riconcesso colonna per colonna.
+revoke select on utenti, materiali, rapportino_ore, rapportino_materiali
+  from anon, authenticated;
+
+grant select (id, nome, ruolo, colore, attivo, creato_il, aggiornato_il)
+  on utenti to authenticated;
+grant select (id, codice, descrizione, unita, prezzo_vendita, attivo, creato_il, aggiornato_il)
+  on materiali to authenticated;
+grant select (id, rapportino_id, tipo, minuti, prezzo_orario, creato_il)
+  on rapportino_ore to authenticated;
+grant select (id, rapportino_id, materiale_id, descrizione, quantita, prezzo_vendita, creato_il)
+  on rapportino_materiali to authenticated;
+
+-- Le scritture restano necessarie a tecnici e ufficio: le policy RLS decidono
+-- quali righe, i privilegi quali colonne.
+grant insert, update, delete on rapportino_ore, rapportino_materiali to authenticated;
+grant insert, update on rapportini to authenticated;
+
+-- Conseguenza da tenere presente: anon, authenticated e service_role sono ruoli
+-- Postgres, mentre tecnico, ufficio e titolare sono valori di una colonna. La
+-- revoca vale quindi anche per il titolare, che è comunque authenticated. Ogni
+-- lettura di costi passa da una funzione security definer che controlla il
+-- ruolo: margini() per gli interventi, listino_con_costi() per il listino.
+-- Nessuna query dell'applicazione chiede mai una colonna di costo direttamente.
+create or replace function listino_con_costi()
+returns table (
+  id uuid,
+  codice text,
+  descrizione text,
+  unita text,
+  prezzo_acquisto numeric(10,2),
+  prezzo_vendita numeric(10,2),
+  ricarico_percentuale numeric
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select m.id, m.codice, m.descrizione, m.unita, m.prezzo_acquisto, m.prezzo_vendita,
+    case when m.prezzo_acquisto = 0 then null
+      else round((m.prezzo_vendita - m.prezzo_acquisto) / m.prezzo_acquisto * 100, 1)
+    end
+  from materiali m
+  where ruolo_corrente() = 'titolare' and m.attivo
+  order by m.codice;
+$$;
 
 create view interventi_con_margine
 with (security_invoker = false)
@@ -538,7 +626,7 @@ as
 select
   i.id as intervento_id,
   i.data,
-  i.cliente_id,
+  s.cliente_id,
   i.tecnico_id,
   r.id as rapportino_id,
   r.stato_fatturazione,
@@ -548,13 +636,19 @@ select
   coalesce(m.costo_materiali, 0) as costo_materiali,
   coalesce(o.ricavo_ore, 0) + coalesce(m.ricavo_materiali, 0) as totale_intervento,
   coalesce(o.ricavo_ore, 0) + coalesce(m.ricavo_materiali, 0)
-    - coalesce(o.costo_ore, 0) - coalesce(m.costo_materiali, 0) as margine
+    - coalesce(o.costo_ore, 0) - coalesce(m.costo_materiali, 0) as margine,
+  -- Un costo orario a zero significa che in anagrafica manca la tariffa del
+  -- tecnico, non che il lavoro è gratis: il margine va mostrato come incompleto
+  -- invece di essere sommato come un dato buono.
+  coalesce(o.costo_mancante, true) as margine_incompleto
 from interventi i
+join sedi s on s.id = i.sede_id
 join rapportini r on r.intervento_id = i.id
 left join (
   select rapportino_id,
     sum(minuti / 60.0 * prezzo_orario) as ricavo_ore,
-    sum(minuti / 60.0 * costo_orario) as costo_ore
+    sum(minuti / 60.0 * costo_orario) as costo_ore,
+    bool_or(costo_orario = 0) as costo_mancante
   from rapportino_ore group by rapportino_id
 ) o on o.rapportino_id = r.id
 left join (
@@ -638,6 +732,20 @@ describe('RLS', () => {
     expect(error).not.toBeNull()
   })
 
+  it('nemmeno il titolare legge i costi in query diretta: authenticated è un solo ruolo', async () => {
+    const { error } = await titolare.from('materiali').select('prezzo_acquisto').limit(1)
+    expect(error).not.toBeNull()
+  })
+
+  it('il titolare legge i costi dalla funzione dedicata, gli altri no', async () => {
+    const perTitolare = await titolare.rpc('listino_con_costi')
+    const perUfficio = await ufficio.rpc('listino_con_costi')
+
+    expect(perTitolare.error).toBeNull()
+    expect((perTitolare.data ?? []).length).toBeGreaterThan(0)
+    expect((perUfficio.data ?? [])).toHaveLength(0)
+  })
+
   it('solo il titolare ottiene righe da margini()', async () => {
     const periodo = { dal: '2026-01-01', al: '2026-12-31' }
     const perUfficio = await ufficio.rpc('margini', periodo)
@@ -651,7 +759,6 @@ describe('RLS', () => {
     const { data: cliente } = await admin.from('clienti').insert({ ragione_sociale: 'RLS Spa' }).select('id').single()
     const { data: sede } = await admin.from('sedi').insert({ cliente_id: cliente!.id, indirizzo: 'Via RLS 1' }).select('id').single()
     await admin.from('interventi').insert({
-      cliente_id: cliente!.id,
       sede_id: sede!.id,
       tecnico_id: altro!.id,
       data: '2026-06-01',
@@ -668,6 +775,11 @@ describe('RLS', () => {
 Run: `npx supabase db reset && npx vitest run tests/rls.test.ts`
 Expected: FAIL — senza la migrazione `0002` le colonne di costo sono leggibili e `margini` non esiste.
 
+Questo fallimento è il punto del task: con i soli `revoke` di colonna il test
+sarebbe fallito allo stesso modo, perché il privilegio di tabella concesso da
+Supabase resta. Se un giorno il test passa senza la revoca di tabella, è la
+revoca a essere diventata inutile, non il test.
+
 - [ ] **Step 4: Applicare la migrazione**
 
 Run: `npx supabase db reset`
@@ -676,7 +788,7 @@ Expected: entrambe le migrazioni applicate.
 - [ ] **Step 5: Verificare che il test passi**
 
 Run: `npx vitest run tests/rls.test.ts`
-Expected: PASS, 5 test.
+Expected: PASS, 7 test.
 
 - [ ] **Step 6: Commit**
 
@@ -1676,24 +1788,55 @@ create policy firme_scrittura on storage.objects for insert
 -- Una sola transazione: crea o aggiorna il rapportino, riscrive le righe,
 -- chiude l intervento. Il secondo invio della stessa bozza aggiorna
 -- invece di duplicare, grazie al vincolo unique su intervento_id.
+-- security definer, non invoker: la funzione deve leggere
+-- utenti.tariffa_costo_oraria, che ai tecnici e all ufficio è revocata. Per
+-- questo verifica da sé chi sta chiudendo, invece di fidarsi delle policy.
 create or replace function chiudi_rapportino(
   p_intervento_id uuid,
   p_note text,
   p_firmatario text,
   p_firma_url text,
   p_ore jsonb,
-  p_materiali jsonb
+  p_materiali jsonb,
+  p_bozza_aggiornata_il timestamptz default null
 )
 returns uuid
 language plpgsql
-security invoker
+security definer
 set search_path = public
 as $$
 declare
   v_rapportino_id uuid;
+  v_aggiornato_il timestamptz;
+  v_tecnico_assegnato uuid;
   v_tariffe impostazioni;
   v_costo numeric(10,2);
 begin
+  select tecnico_id into v_tecnico_assegnato from interventi where id = p_intervento_id;
+  if v_tecnico_assegnato is null and ruolo_corrente() is distinct from 'ufficio' then
+    -- Nessun tecnico assegnato: solo l ufficio può chiudere al posto suo.
+    if ruolo_corrente() is distinct from 'titolare' then
+      raise exception 'Intervento non assegnato' using errcode = '42501';
+    end if;
+  end if;
+  if v_tecnico_assegnato is distinct from auth.uid()
+     and coalesce(ruolo_corrente()::text, '') not in ('ufficio', 'titolare') then
+    raise exception 'Intervento di un altro tecnico' using errcode = '42501';
+  end if;
+
+  -- Il vincolo unique protegge dal doppione, non dal sorpasso: una bozza
+  -- rimasta in coda per giorni non deve sovrascrivere le correzioni fatte in
+  -- ufficio nel frattempo.
+  select id, aggiornato_il into v_rapportino_id, v_aggiornato_il
+  from rapportini where intervento_id = p_intervento_id;
+
+  if v_rapportino_id is not null
+     and p_bozza_aggiornata_il is not null
+     and v_aggiornato_il > p_bozza_aggiornata_il then
+    raise exception 'Rapportino già modificato in ufficio il %', v_aggiornato_il
+      using errcode = '40001';
+  end if;
+
   select * into v_tariffe from impostazioni where id;
   select tariffa_costo_oraria into v_costo from utenti where id = auth.uid();
   v_costo := coalesce(v_costo, 0);
@@ -1743,6 +1886,9 @@ begin
   return v_rapportino_id;
 end;
 $$;
+
+revoke all on function chiudi_rapportino(uuid, text, text, text, jsonb, jsonb, timestamptz) from public;
+grant execute on function chiudi_rapportino(uuid, text, text, text, jsonb, jsonb, timestamptz) to authenticated;
 ```
 
 Nota sul prezzo: le tariffe orarie e i prezzi dei materiali si leggono dal database al momento della chiusura, non dalla bozza del telefono. Così un telefono con listino vecchio in cache non riporta prezzi sbagliati, e le righe restano comunque congelate dopo l'inserimento.
@@ -1787,7 +1933,6 @@ beforeAll(async () => {
   const { data: intervento } = await admin
     .from('interventi')
     .insert({
-      cliente_id: cliente!.id,
       sede_id: sede!.id,
       tecnico_id: tecnicoId,
       data: '2026-09-12',
@@ -1900,6 +2045,41 @@ describe('chiudi_rapportino', () => {
     await admin.from('materiali').update({ prezzo_vendita: 11 }).eq('codice', 'VAL-SFE-12')
   })
 
+  it('rifiuta una bozza più vecchia dell ultima modifica in ufficio', async () => {
+    await chiudi('Chiusura del tecnico')
+
+    // L ufficio corregge il rapportino dopo la chiusura.
+    await admin
+      .from('rapportini')
+      .update({ note: 'Corretto in ufficio' })
+      .eq('intervento_id', interventoId)
+
+    const { data: materiale } = await admin
+      .from('materiali')
+      .select('id')
+      .eq('codice', 'VAL-SFE-12')
+      .single()
+
+    const bozzaVecchia = await tecnico.rpc('chiudi_rapportino', {
+      p_intervento_id: interventoId,
+      p_note: 'Reinvio di una bozza vecchia',
+      p_firmatario: 'Sig. Rossi',
+      p_firma_url: null,
+      p_ore: ore,
+      p_materiali: [{ materiale_id: materiale!.id, quantita: 2 }],
+      p_bozza_aggiornata_il: new Date(Date.now() - 86_400_000).toISOString(),
+    })
+
+    expect(bozzaVecchia.error).not.toBeNull()
+
+    const { data: rapportino } = await admin
+      .from('rapportini')
+      .select('note')
+      .eq('intervento_id', interventoId)
+      .single()
+    expect(rapportino!.note).toBe('Corretto in ufficio')
+  })
+
   it('scarta le righe con minuti o quantita a zero', async () => {
     const { data } = await tecnico.rpc('chiudi_rapportino', {
       p_intervento_id: interventoId,
@@ -1908,6 +2088,7 @@ describe('chiudi_rapportino', () => {
       p_firma_url: null,
       p_ore: [{ tipo: 'viaggio', minuti: 0 }, { tipo: 'ordinario', minuti: 45 }],
       p_materiali: [{ materiale_id: null, descrizione: 'Sigillante', quantita: 0, prezzo_vendita: 5 }],
+      p_bozza_aggiornata_il: null,
     })
 
     const { data: righeOre } = await admin
@@ -1939,7 +2120,7 @@ Expected: le tre migrazioni applicate.
 - [ ] **Step 5: Verificare che il test passi**
 
 Run: `npx vitest run tests/chiusura.test.ts`
-Expected: PASS, 4 test.
+Expected: PASS, 5 test.
 
 - [ ] **Step 6: Scrivere le server action**
 
@@ -1984,6 +2165,7 @@ export async function chiudiRapportino(bozza: BozzaRapportino) {
       quantita,
       prezzo_vendita,
     })),
+    p_bozza_aggiornata_il: new Date(bozza.aggiornataIl).toISOString(),
   })
 
   if (error) throw new Error(error.message)
@@ -2268,8 +2450,7 @@ export default async function Oggi() {
     .from('interventi')
     .select(
       `id, ora_inizio, descrizione, priorita, stato,
-       clienti ( ragione_sociale ),
-       sedi ( indirizzo, comune ),
+       sedi ( indirizzo, comune, clienti ( ragione_sociale ) ),
        rapportini ( id )`,
     )
     .eq('tecnico_id', utente.id)
@@ -2283,7 +2464,7 @@ export default async function Oggi() {
     descrizione: riga.descrizione,
     priorita: riga.priorita,
     stato: riga.stato,
-    cliente: riga.clienti?.ragione_sociale ?? 'Cliente non indicato',
+    cliente: riga.sedi?.clienti?.ragione_sociale ?? 'Cliente non indicato',
     indirizzo: riga.sedi?.indirizzo ?? '',
     comune: riga.sedi?.comune ?? null,
     haRapportino: (riga.rapportini ?? []).length > 0,
@@ -2986,7 +3167,15 @@ export function FormRapportino({
         await chiudiRapportino(bozza)
         await eliminaBozza(interventoId)
         router.push('/oggi')
-      } catch {
+      } catch (errore) {
+        const testo = errore instanceof Error ? errore.message : ''
+        if (testo.includes('già modificato in ufficio')) {
+          // Rimetterlo in coda lo farebbe rifiutare per sempre: qui serve una persona.
+          setMessaggio(
+            'L ufficio ha già corretto questo rapportino: la tua copia non è stata inviata. Chiama l ufficio prima di rifarlo.',
+          )
+          return
+        }
         await accodaInvio(bozza)
         setMessaggio('Rete assente: rapportino messo in coda, verrà inviato appena torna il segnale.')
       }
@@ -3265,17 +3454,10 @@ export async function creaIntervento(dati: FormData) {
   if (!descrizione) return { errore: 'Scrivi cosa va fatto.' }
 
   const supabase = await clientServer()
-  const { data: sede } = await supabase
-    .from('sedi')
-    .select('cliente_id')
-    .eq('id', sedeId)
-    .single()
-  if (!sede) return { errore: 'Sede non trovata.' }
-
   const oraInizio = String(dati.get('ora_inizio') ?? '')
 
+  // Nessun cliente_id da passare: lo schema lo ricava dalla sede.
   const { error } = await supabase.from('interventi').insert({
-    cliente_id: sede.cliente_id,
     sede_id: sedeId,
     tecnico_id: String(dati.get('tecnico_id') ?? '') || null,
     data: String(dati.get('data') ?? ''),
@@ -3577,9 +3759,11 @@ Expected: PASS, 7 test.
 
 Creare `app/(ufficio)/rapportini/page.tsx`: `richiediRuolo(['ufficio', 'titolare'])`, legge i rapportini con `stato_fatturazione = 'da_fatturare'` (filtro modificabile via `searchParams.stato`) con intervento, cliente, tecnico e le righe di ore e materiali, calcola il totale con `calcolaTotali` e rende una tabella con data, cliente, tecnico, ore totali, totale e un link al dettaglio. In testa, un link a `/api/export/rapportini?dal=…&al=…` per scaricare il CSV del periodo.
 
+Né la stampa né il CSV cambiano lo stato del rapportino. Sono operazioni del browser: una stampa si annulla, un download si interrompe, e un rapportino marcato `fatturato` senza fattura emessa è un lavoro che nessuno rifattura più. Lo stato passa a `fatturato` solo con l'azione esplicita del passo successivo, dopo che il commercialista ha emesso.
+
 - [ ] **Step 6: Implementare il dettaglio**
 
-Creare `app/(ufficio)/rapportini/[id]/page.tsx`: mostra intestazione cliente e sede, la tabella delle ore per tipo con tariffa e importo, la tabella dei materiali con quantità e prezzo, il riepilogo `Costo ore + Costo materiali = Totale intervento`, le note, il nome del firmatario e la firma come immagine (URL firmato con `createSignedUrl` su 60 secondi). Due pulsanti: un link a `/rapportini/[id]/stampa` che apre la versione stampabile, e un form che invoca `segnaFatturato`.
+Creare `app/(ufficio)/rapportini/[id]/page.tsx`: mostra intestazione cliente e sede, la tabella delle ore per tipo con tariffa e importo, la tabella dei materiali con quantità e prezzo, il riepilogo `Costo ore + Costo materiali = Totale intervento`, le note, il nome del firmatario e la firma come immagine (URL firmato con `createSignedUrl` su 60 secondi). Due pulsanti: un link a `/rapportini/[id]/stampa` che apre la versione stampabile, e un form che invoca `segnaFatturato` con l'etichetta "Segna come fatturato" — l'unico punto in cui lo stato cambia.
 
 Creare `app/(ufficio)/rapportini/azioni.ts`:
 
@@ -3630,7 +3814,7 @@ export async function GET(request: NextRequest) {
     .from('rapportini')
     .select(
       `id, chiuso_il,
-       interventi!inner ( data, descrizione, clienti ( ragione_sociale, partita_iva ) ),
+       interventi!inner ( data, descrizione, sedi ( clienti ( ragione_sociale, partita_iva ) ) ),
        rapportino_ore ( tipo, minuti, prezzo_orario ),
        rapportino_materiali ( quantita, prezzo_vendita )`,
     )
@@ -3646,8 +3830,8 @@ export async function GET(request: NextRequest) {
     return {
       numero: `RAP-${anno}-${String(indice + 1).padStart(4, '0')}`,
       data: r.interventi?.data ?? '',
-      cliente: r.interventi?.clienti?.ragione_sociale ?? '',
-      partita_iva: r.interventi?.clienti?.partita_iva ?? null,
+      cliente: r.interventi?.sedi?.clienti?.ragione_sociale ?? '',
+      partita_iva: r.interventi?.sedi?.clienti?.partita_iva ?? null,
       descrizione: r.interventi?.descrizione ?? '',
       ore: (r.rapportino_ore ?? []).reduce((s, o) => s + o.minuti, 0) / 60,
       importo_ore: totali.ricavoOre,
@@ -4010,8 +4194,10 @@ export function TesseraKpi({
 Creare `app/(titolare)/dashboard/page.tsx`: `richiediRuolo(['titolare'])`, legge il periodo con `periodoDaParametri(searchParams.dal, searchParams.al)`, chiama `supabase.rpc('margini', { dal, al })`, somma ricavi, costi e margine, e rende:
 
 - quattro `<TesseraKpi />`: ricavo totale, costo del lavoro, costo dei materiali, margine (tono positivo se maggiore di zero, negativo altrimenti) con la percentuale come dettaglio;
+- quando almeno una riga ha `margine_incompleto` a `true`, un avviso sopra le tessere: "Margine parziale: N interventi senza tariffa di costo del tecnico", con il link all'anagrafica. Il margine di quelle righe risulterebbe pari al ricavo, quindi va detto invece di essere presentato come un dato completo;
 - una tabella per tecnico: nome, numero di interventi, ore fatturate, ricavo, margine, margine percentuale — ottenuta raggruppando le righe di `margini` per `tecnico_id` e unendo i nomi da `utenti`;
-- una tabella per tipo di ora (viaggio, ordinario, urgenza) con ore totali e ricavo, letta da `rapportino_ore` sul periodo;
+- una tabella per tipo di ora (viaggio, ordinario, urgenza) con ore totali e ricavo, letta da `rapportino_ore` sul periodo — solo colonne di ricavo, le sole concesse;
+- una tabella dei dieci materiali più venduti con ricarico percentuale, letta da `supabase.rpc('listino_con_costi')`: è l'unica via per i prezzi di acquisto, perché la colonna è revocata anche al titolare;
 - un form GET con due campi data per cambiare periodo.
 
 Se `margini` restituisce zero righe, mostrare "Nessun intervento chiuso nel periodo" al posto delle tabelle.
@@ -4172,7 +4358,6 @@ test.beforeAll(async () => {
     .select('id')
     .single()
   await admin.from('interventi').insert({
-    cliente_id: cliente!.id,
     sede_id: sede!.id,
     tecnico_id: tecnicoId,
     data: new Date().toISOString().slice(0, 10),
@@ -4472,3 +4657,9 @@ git commit -m "feat: refresh office list in realtime, flag unsigned reports, add
 | Rapportino visibile in ufficio istantaneamente | 16 |
 | Firma mancante consentita e segnalata | 16 |
 | Cliente non in anagrafica, creazione dal telefono | 16 |
+| Costi nascosti con revoca di tabella e concessione per colonna | 3 |
+| Coerenza cliente-sede-impianto imposta dallo schema | 2 |
+| Prezzi e costi non negativi | 2 |
+| Export separato dallo stato `fatturato` | 12 |
+| Margine segnalato come incompleto | 3, 14 |
+| Bozza vecchia che non sorpassa le correzioni dell'ufficio | 8, 10 |

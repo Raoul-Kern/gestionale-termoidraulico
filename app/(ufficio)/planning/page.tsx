@@ -1,23 +1,10 @@
 import Link from 'next/link'
 import { richiediRuolo } from '@/lib/sessione'
 import { clientServer } from '@/lib/supabase/server'
+import { dataDiOggi, inItaliano, spostaGiorno } from '@/lib/data'
 import { Tabellone } from '@/components/ufficio/Tabellone'
 import { DialogIntervento } from '@/components/ufficio/DialogIntervento'
 import type { InterventoPlanning } from '@/components/ufficio/CardPlanning'
-
-const giorno = (data: string, passo: number) => {
-  const spostata = new Date(`${data}T00:00:00Z`)
-  spostata.setUTCDate(spostata.getUTCDate() + passo)
-  return spostata.toISOString().slice(0, 10)
-}
-
-const inItaliano = (data: string) =>
-  new Intl.DateTimeFormat('it-IT', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    timeZone: 'UTC',
-  }).format(new Date(`${data}T00:00:00Z`))
 
 export default async function Planning({
   searchParams,
@@ -26,7 +13,7 @@ export default async function Planning({
 }) {
   await richiediRuolo(['ufficio', 'titolare'])
   const parametri = await searchParams
-  const data = parametri.data ?? new Date().toISOString().slice(0, 10)
+  const data = parametri.data ?? dataDiOggi()
 
   const supabase = await clientServer()
 
@@ -67,10 +54,10 @@ export default async function Planning({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <Link
-          href={`/planning?data=${giorno(data, -1)}`}
+          href={`/planning?data=${spostaGiorno(data, -1)}`}
           className="h-10 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
         >
-          ← {inItaliano(giorno(data, -1))}
+          ← {inItaliano(spostaGiorno(data, -1))}
         </Link>
 
         <h1 className="font-[family-name:var(--font-titoli)] text-xl font-semibold capitalize">
@@ -78,10 +65,10 @@ export default async function Planning({
         </h1>
 
         <Link
-          href={`/planning?data=${giorno(data, 1)}`}
+          href={`/planning?data=${spostaGiorno(data, 1)}`}
           className="h-10 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
         >
-          {inItaliano(giorno(data, 1))} →
+          {inItaliano(spostaGiorno(data, 1))} →
         </Link>
 
         <div className="ml-auto">

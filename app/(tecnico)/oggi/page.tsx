@@ -1,12 +1,13 @@
 import { richiediRuolo } from '@/lib/sessione'
 import { clientServer } from '@/lib/supabase/server'
+import { dataDiOggi } from '@/lib/data'
 import { CardIntervento, type InterventoDelGiorno } from '@/components/tecnico/CardIntervento'
 import { StatoCoda } from '@/components/tecnico/StatoCoda'
 
 export default async function Oggi() {
   const utente = await richiediRuolo(['tecnico'])
   const supabase = await clientServer()
-  const oggi = new Date().toISOString().slice(0, 10)
+  const oggi = dataDiOggi()
 
   const { data } = await supabase
     .from('interventi')

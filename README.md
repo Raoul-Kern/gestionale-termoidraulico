@@ -28,17 +28,28 @@ npm run build      # build di produzione
 I test dei permessi e della chiusura parlano con il progetto Supabase vero:
 servono le variabili in `.env.local`, copiabili da `.env.local.example`.
 
-## Database
+## Due progetti Supabase
 
-Le migrazioni stanno in `supabase/migrations` e si applicano con:
+| Progetto | Ref | A cosa serve |
+|---|---|---|
+| `Gestionali-idraulici` | `rityxqquwbiiusitofam` | Sviluppo e test. I test creano utenti e cancellano righe: qui è normale. |
+| `gestionale-prod` | `phhikstqdwojblttbbut` | Produzione. Nessun test lo tocca, e le variabili `E2E_*` non devono mai nominarlo. |
+
+La separazione non è prudenza astratta: con un solo progetto la produzione si
+riempie di clienti e tecnici inventati dai test, e diventa illeggibile.
+
+Le migrazioni stanno in `supabase/migrations`:
 
 ```bash
-npx supabase link --project-ref <ref-del-progetto>
+npx supabase link --project-ref <ref>   # attenzione: cambia il bersaglio di db push
 npx supabase db push
-npx supabase db query --linked -f supabase/seed.sql   # solo su un progetto di prova
 ```
 
-Il seed cancella e ricrea dati: non va eseguito dove ci sono rapportini veri.
+Due file di dati, con scopi diversi:
+
+- `supabase/listino.sql` — solo i materiali. Va bene anche in produzione.
+- `supabase/seed.sql` — listino più clienti, sedi e impianti inventati. Solo in
+  sviluppo.
 
 ## Primo utente titolare
 

@@ -532,6 +532,18 @@ export type Database = {
       }
     }
     Functions: {
+      chiudi_rapportino: {
+        Args: {
+          p_bozza_aggiornata_il?: string
+          p_firma_url?: string
+          p_firmatario?: string
+          p_intervento_id: string
+          p_materiali?: Json
+          p_note?: string
+          p_ore?: Json
+        }
+        Returns: string
+      }
       listino_con_costi: {
         Args: never
         Returns: {

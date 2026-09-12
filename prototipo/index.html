@@ -777,6 +777,8 @@
     * { transition: none !important; animation: none !important; }
   }
 </style>
+</head>
+<body>
 
 <div class="involucro">
   <header class="testata">
@@ -1203,6 +1205,7 @@
       document.querySelectorAll('[data-vista-passo]').forEach((blocco) => {
         blocco.hidden = blocco.dataset.vistaPasso !== bottone.dataset.passo;
       });
+      if (bottone.dataset.passo === '2') preparaTela();
     });
   });
 
@@ -1268,10 +1271,17 @@
   const tela = document.getElementById('tela-firma');
   const contesto = tela.getContext('2d');
 
+  // Con il passo firma ancora nascosto la tela misura 0x0: preparare adesso
+  // produrrebbe un canvas di dimensione nulla, su cui il tratto non compare.
+  // Va rifatto quando il passo diventa visibile e a ogni ridimensionamento,
+  // conservando quello che il cliente ha già firmato.
   function preparaTela() {
-    const scala = window.devicePixelRatio || 1;
     const larghezza = tela.clientWidth;
     const altezza = tela.clientHeight;
+    if (!larghezza || !altezza) return false;
+
+    const scala = window.devicePixelRatio || 1;
+    const precedente = tela.width && tela.height ? tela.toDataURL('image/png') : null;
     tela.width = larghezza * scala;
     tela.height = altezza * scala;
     contesto.setTransform(scala, 0, 0, scala, 0, 0);
@@ -1280,6 +1290,14 @@
     contesto.strokeStyle = '#101c21';
     contesto.fillStyle = '#ffffff';
     contesto.fillRect(0, 0, larghezza, altezza);
+
+    if (precedente && stato.firma) {
+      const immagine = new Image();
+      immagine.onload = () => contesto.drawImage(immagine, 0, 0, larghezza, altezza);
+      immagine.src = precedente;
+    }
+
+    return true;
   }
 
   let disegnando = false;
@@ -1542,6 +1560,12 @@
         corpo.append(riga);
       });
   }
+
+  let ridisegnoInCorso;
+  window.addEventListener('resize', () => {
+    clearTimeout(ridisegnoInCorso);
+    ridisegnoInCorso = setTimeout(preparaTela, 150);
+  });
 
   preparaTela();
   disegna();

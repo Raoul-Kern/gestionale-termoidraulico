@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { richiediRuolo } from '@/lib/sessione'
 import { clientServer } from '@/lib/supabase/server'
 import { calcolaTotali, formattaEuro, formattaOre } from '@/lib/calcoli'
+import { AscoltaRapportini } from '@/components/ufficio/AscoltaRapportini'
 
 const STATI = ['da_fatturare', 'fatturato', 'non_fatturabile'] as const
 type Stato = (typeof STATI)[number]
@@ -69,6 +70,8 @@ export default async function Rapportini({
 
   return (
     <div className="flex flex-col gap-4">
+      <AscoltaRapportini />
+
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="font-[family-name:var(--font-titoli)] text-xl font-semibold">Rapportini</h1>
 

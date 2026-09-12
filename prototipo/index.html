@@ -1,0 +1,1553 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2327705c'/%3E%3Cpath d='M9 22V10h4.6c2.5 0 4 1.3 4 3.4 0 2-1.5 3.4-4 3.4H12V22H9z' fill='%23fff'/%3E%3Ccircle cx='22' cy='20' r='2.4' fill='%238a6220'/%3E%3C/svg%3E">
+<title>Rapportini in furgone</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600&display=swap">
+<style>
+  :root {
+    /* Porcellana calda, non il grigio ardesia di ordinanza */
+    --ground: #f7f7f4;
+    --surface: #ffffff;
+    --surface-2: #fbfbf9;
+    --ink: #1c2420;
+    --muted: #5f6b64;
+    --line: #e3e5df;
+    --line-forte: #cdd1c9;
+    /* Verderame: l'unico colore forte della pagina */
+    --verde: #27705c;
+    --verde-testo: #1f5c4b;
+    --verde-tenue: #eaf2ee;
+    /* Ottone per gli accenti, non per i pulsanti */
+    --ottone: #8a6220;
+    --ottone-tenue: #f7f0e2;
+    --rosso: #b3322a;
+    --rosso-tenue: #fbeceb;
+    --ambra: #8a5a00;
+    --ambra-tenue: #fdf3dc;
+    --ombra: 0 1px 0 rgba(28, 36, 32, .04);
+    --display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --testo: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    /* Cifre: stessa famiglia dei titoli, con le figure tabulari per incolonnare */
+    --cifre: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #141816;
+      --surface: #1b201d;
+      --surface-2: #212724;
+      --ink: #e8ebe7;
+      --muted: #a0aaa4;
+      --line: #2c332f;
+      --line-forte: #3b433e;
+      --verde: #5aa791;
+      --verde-testo: #7cc0ab;
+      --verde-tenue: #1d2e28;
+      --ottone: #c99b4e;
+      --ottone-tenue: #2d2618;
+      --rosso: #e8837a;
+      --rosso-tenue: #2e1d1b;
+      --ambra: #d9a453;
+      --ambra-tenue: #2c2413;
+      --ombra: 0 1px 0 rgba(0, 0, 0, .3);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #141816;
+    --surface: #1b201d;
+    --surface-2: #212724;
+    --ink: #e8ebe7;
+    --muted: #a0aaa4;
+    --line: #2c332f;
+    --line-forte: #3b433e;
+    --verde: #5aa791;
+    --verde-testo: #7cc0ab;
+    --verde-tenue: #1d2e28;
+    --ottone: #c99b4e;
+    --ottone-tenue: #2d2618;
+    --rosso: #e8837a;
+    --rosso-tenue: #2e1d1b;
+    --ambra: #d9a453;
+    --ambra-tenue: #2c2413;
+    --ombra: 0 1px 0 rgba(0, 0, 0, .3);
+  }
+
+  * { box-sizing: border-box; }
+
+  .timer-riga strong,
+  .stepper output,
+  .totale-riga strong,
+  .usati .q,
+  .conta strong,
+  td.num,
+  .cella-ora,
+  .tariffe,
+  .risultati small,
+  .usati .nome small,
+  .telefono-barra,
+  .impegno small {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--testo);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .involucro {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding-inline: 16px;
+    padding-block: 20px 56px;
+  }
+
+  /* Intestazione */
+
+  .testata {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line-forte);
+  }
+
+  .marchio {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .marchio h1 {
+    margin: 0;
+    font-family: var(--display);
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    text-transform: uppercase;
+    text-wrap: balance;
+  }
+
+  .marchio span {
+    font-family: var(--cifre);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ottone);
+  }
+
+  .avviso {
+    max-width: 46ch;
+    margin: 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .avviso strong { color: var(--ink); font-weight: 600; }
+
+  /* Commutatore di vista */
+
+  .viste {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-block: 20px 24px;
+  }
+
+  .viste button {
+    font-family: var(--display);
+    font-size: 14.5px;
+    font-weight: 600;
+    letter-spacing: .01em;
+    padding: 9px 18px;
+    transition: background-color .2s ease, color .2s ease;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  .viste button[aria-pressed="true"] {
+    background: var(--verde);
+    border-color: var(--verde);
+    color: #fff;
+  }
+
+  :root[data-theme="dark"] .viste button[aria-pressed="true"] { color: #10201b; }
+
+  .viste button:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid var(--ottone);
+    outline-offset: 2px;
+  }
+
+  .pannello[hidden] { display: none !important; }
+
+  .didascalia {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px 16px;
+    margin-block: 0 16px;
+  }
+
+  .didascalia h2 {
+    margin: 0;
+    font-family: var(--display);
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: .01em;
+  }
+
+  .didascalia p { margin: 0; font-size: 13px; color: var(--muted); }
+
+  /* ---------- Vista tecnico: cornice telefono ---------- */
+
+  .scena-telefono {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px;
+    align-items: flex-start;
+  }
+
+  .telefono {
+    width: 390px;
+    max-width: 100%;
+    border: 8px solid var(--line-forte);
+    border-radius: 34px;
+    background: var(--surface-2);
+    box-shadow: var(--ombra);
+    overflow: hidden;
+  }
+
+  .telefono-barra {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 18px 5px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+    font-family: var(--cifre);
+    font-size: 10.5px;
+  }
+
+  .telefono-intestazione {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .telefono-intestazione strong { font-size: 15px; }
+
+  .telefono-intestazione span {
+    font-family: var(--cifre);
+    font-size: 11px;
+    letter-spacing: .02em;
+    color: var(--muted);
+  }
+
+  .telefono-corpo { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+  .lavoro {
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .lavoro h3 {
+    margin: 0;
+    font-family: var(--display);
+    font-size: 19px;
+    font-weight: 600;
+  }
+
+  .lavoro p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+
+  .passi { display: flex; gap: 6px; }
+
+  .passi button {
+    flex: 1;
+    height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--muted);
+    font-family: var(--testo);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .passi button[aria-pressed="true"] {
+    background: var(--verde);
+    border-color: var(--verde);
+    color: #fff;
+  }
+
+  .blocco {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 14px;
+  }
+
+  .timer { display: flex; flex-direction: column; gap: 12px; }
+
+  .timer-riga {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .timer-riga span { font-size: 13px; color: var(--muted); }
+
+  .timer-riga strong {
+    font-family: var(--cifre);
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: -.02em;
+  }
+
+  .pulsante-grande {
+    height: 54px;
+    width: 100%;
+    border: 0;
+    transition: background-color .2s ease, border-color .2s ease;
+    border-radius: 14px;
+    font-family: var(--testo);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--verde);
+    color: var(--ground);
+  }
+
+  .pulsante-grande.avvia {
+    background: var(--surface);
+    border: 1.5px solid var(--verde);
+    color: var(--verde-testo);
+  }
+
+  .pulsante-grande.ferma { background: var(--ink); color: var(--surface); }
+  .pulsante-grande.chiudi { background: var(--verde); color: #fff; }
+  .pulsante-grande:disabled { opacity: .5; cursor: not-allowed; }
+
+  .ora-riga + .ora-riga { margin-top: 10px; }
+
+  .ora-testata {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .ora-testata b { font-size: 15px; font-weight: 600; }
+
+  .ora-testata span { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .stepper { display: flex; align-items: center; gap: 10px; }
+
+  .stepper button {
+    width: 54px;
+    height: 54px;
+    flex: none;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--ink);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .stepper button.piu {
+    background: var(--verde);
+    border-color: var(--verde);
+    color: #fff;
+  }
+
+  .stepper output {
+    flex: 1;
+    text-align: center;
+    font-family: var(--cifre);
+    font-size: 21px;
+    font-weight: 600;
+  }
+
+  .cerca {
+    width: 100%;
+    height: 54px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--testo);
+    font-size: 16px;
+  }
+
+  .risultati { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+
+  .risultati button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    text-align: left;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--testo);
+    cursor: pointer;
+  }
+
+  .risultati b { display: block; font-size: 14px; font-weight: 500; }
+  .risultati small { display: block; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .usati { list-style: none; margin: 0; padding: 0; }
+
+  .usati li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .usati li:last-child { border-bottom: 0; }
+
+  .usati .nome { flex: 1; min-width: 0; }
+  .usati .nome b { display: block; font-size: 14px; font-weight: 500; }
+  .usati .nome small { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .usati .q {
+    width: 40px;
+    text-align: center;
+    font-family: var(--cifre);
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .usati button {
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--ink);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .usati button.piu { background: var(--verde); border-color: var(--verde); color: #fff; }
+
+  .vuoto { margin: 0; padding: 14px 0; text-align: center; font-size: 13px; color: var(--muted); }
+
+  .campo { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+
+  .campo textarea,
+  .campo input {
+    font-family: var(--testo);
+    font-size: 16px;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+
+  .campo textarea { min-height: 84px; resize: vertical; }
+
+  #tela-firma {
+    width: 100%;
+    height: 170px;
+    border: 2px dashed var(--line);
+    border-radius: 16px;
+    background: #fff;
+    touch-action: none;
+    display: block;
+  }
+
+  .totale-barra {
+    position: sticky;
+    bottom: 0;
+    margin-top: 4px;
+    padding: 12px 16px 16px;
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+  }
+
+  .totale-riga {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .totale-riga span { font-size: 13px; color: var(--muted); }
+
+  .totale-riga strong {
+    font-family: var(--cifre);
+    font-size: 27px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+  }
+
+  .messaggio {
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--ambra-tenue);
+    color: var(--ambra);
+    font-size: 13px;
+  }
+
+  .messaggio.fatto { background: var(--verde-tenue); color: var(--verde); }
+
+  /* Colonna di spiegazione accanto al telefono */
+
+  .note-laterali {
+    flex: 1;
+    min-width: 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .nota h3 {
+    margin: 0 0 4px;
+    font-family: var(--display);
+    font-size: 16.5px;
+    font-weight: 600;
+    letter-spacing: .01em;
+  }
+
+  .nota p { margin: 0; font-size: 14px; color: var(--muted); max-width: 62ch; }
+
+  .nota code {
+    font-family: var(--cifre);
+    font-weight: 500;
+    font-size: 13px;
+    padding: 1px 5px;
+    border-radius: 5px;
+    background: var(--ottone-tenue);
+    color: var(--ottone);
+  }
+
+  .tariffe { list-style: none; margin: 8px 0 0; padding: 0; font-variant-numeric: tabular-nums; }
+
+  .tariffe li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 0;
+    border-bottom: 1px dotted var(--line);
+    font-size: 14px;
+  }
+
+  /* ---------- Tabellone ufficio ---------- */
+
+  .barra-giorno {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .barra-giorno .data {
+    font-family: var(--display);
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .barra-giorno button {
+    height: 38px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--testo);
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .da-assegnare {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    background: var(--ottone-tenue);
+    border: 1px solid var(--ottone);
+    border-radius: 14px;
+  }
+
+  .da-assegnare > strong {
+    font-family: var(--display);
+    font-size: 13.5px;
+    letter-spacing: .01em;
+    color: var(--ottone);
+  }
+
+  .scorrevole { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+
+  .tabellone {
+    display: grid;
+    min-width: 940px;
+    grid-template-columns: 68px repeat(5, minmax(172px, 1fr));
+  }
+
+  .tabellone > div { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); }
+  .tabellone > div:nth-child(6n) { border-right: 0; }
+
+  .cella-testata {
+    padding: 9px 12px;
+    background: var(--surface);
+    border-bottom: 2px solid var(--verde) !important;
+    font-family: var(--display);
+    font-size: 13.5px;
+    font-weight: 600;
+    letter-spacing: .01em;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  .cella-ora {
+    padding: 8px 10px;
+    background: var(--surface-2);
+    font-family: var(--cifre);
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+
+  .cella {
+    min-height: 66px;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .cella.sopra { background: var(--ottone-tenue); box-shadow: inset 0 0 0 2px var(--ottone); }
+
+  .impegno {
+    border-radius: 8px;
+    padding: 7px 9px;
+    background: var(--verde-tenue);
+    border-left: 3px solid var(--verde);
+    cursor: grab;
+    font-size: 12.5px;
+  }
+
+  .impegno.urgente { border-left-color: var(--rosso); background: var(--rosso-tenue); }
+  .impegno.chiuso { opacity: .55; border-left-style: dotted; }
+  .impegno b { display: block; font-size: 13px; font-weight: 600; }
+  .impegno small { display: block; color: var(--muted); }
+  .impegno:active { cursor: grabbing; }
+
+  /* Liste ufficio */
+
+  .griglia-liste {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    margin-top: 24px;
+  }
+
+  .scheda {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .scheda > h3 {
+    margin: 0;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line-forte);
+    font-family: var(--display);
+    font-size: 15.5px;
+    font-weight: 600;
+    letter-spacing: .01em;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+
+  th {
+    text-align: left;
+    padding: 9px 16px;
+    font-family: var(--display);
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: .01em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--line-forte);
+  }
+
+  td { padding: 11px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  td.num { text-align: right; font-family: var(--cifre); font-size: 13.5px; font-weight: 500; }
+  td small { display: block; color: var(--muted); font-size: 12px; }
+
+  .pillola {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .pillola.scaduto { background: var(--rosso-tenue); color: var(--rosso); box-shadow: inset 0 0 0 1px var(--rosso); }
+  .pillola.scadenza { background: var(--ambra-tenue); color: var(--ambra); box-shadow: inset 0 0 0 1px currentColor; }
+  .pillola.ok { background: transparent; color: var(--muted); font-family: var(--cifre); font-weight: 400; }
+  .pillola.nonfirmato { background: var(--ambra-tenue); color: var(--ambra); }
+
+  .conta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .conta div {
+    flex: 1;
+    min-width: 140px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+
+  .conta strong {
+    display: block;
+    font-family: var(--cifre);
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -.03em;
+    line-height: 1.15;
+  }
+
+  .conta.rosso strong, div.rosso strong { color: var(--rosso); }
+  .conta span { font-size: 12.5px; color: var(--muted); }
+
+  .piede {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  @media (max-width: 720px) {
+    .marchio h1 { font-size: 27px; }
+    .telefono { border-width: 6px; border-radius: 28px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<div class="involucro">
+  <header class="testata">
+    <div class="marchio">
+      <h1>Rapportini</h1>
+      <span>prototipo</span>
+    </div>
+    <p class="avviso">
+      Schermate finte con <strong>dati inventati</strong>, per giudicare ergonomia e layout prima di
+      scrivere il codice. Nessun database dietro: quello che tocchi non viene salvato.
+    </p>
+  </header>
+
+  <nav class="viste" aria-label="Scegli la vista">
+    <button type="button" data-vista="tecnico" aria-pressed="true">Telefono del tecnico</button>
+    <button type="button" data-vista="ufficio" aria-pressed="false">Tabellone ufficio</button>
+    <button type="button" data-vista="scadenze" aria-pressed="false">Scadenzario</button>
+  </nav>
+
+  <!-- ============ TECNICO ============ -->
+  <section class="pannello" id="pannello-tecnico">
+    <div class="didascalia">
+      <h2>Rapportino in cantiere</h2>
+      <p>Cornice 390 px, la larghezza di un telefono tenuto in una mano.</p>
+    </div>
+
+    <div class="scena-telefono">
+      <div class="telefono">
+        <div class="telefono-barra"><span>9:41</span><span>Rete 3G · 41%</span></div>
+        <div class="telefono-intestazione">
+          <strong>Luca Ferrari</strong>
+          <span>Tecnico · Furgone 2</span>
+        </div>
+
+        <div class="telefono-corpo">
+          <div class="lavoro">
+            <h3>Panificio Rossi S.r.l.</h3>
+            <p>Via Industriale 8, Brescia · Laboratorio</p>
+            <p>Caldaia in blocco, non carica pressione. Aperto dalle 5 alle 13.</p>
+          </div>
+
+          <div class="passi" role="group" aria-label="Passi del rapportino">
+            <button type="button" data-passo="0" aria-pressed="true">Ore</button>
+            <button type="button" data-passo="1" aria-pressed="false">Materiali</button>
+            <button type="button" data-passo="2" aria-pressed="false">Note e firma</button>
+          </div>
+
+          <!-- Passo ore -->
+          <div data-vista-passo="0">
+            <div class="blocco timer">
+              <div class="timer-riga">
+                <span>Timer di lavoro</span>
+                <strong id="timer-lettura">0 min</strong>
+              </div>
+              <button type="button" class="pulsante-grande avvia" id="pulsante-timer">Avvia timer</button>
+            </div>
+
+            <div class="blocco" style="margin-top:14px">
+              <div class="ora-riga" data-tipo="viaggio">
+                <div class="ora-testata"><b>Viaggio</b><span>30,00 € / h</span></div>
+                <div class="stepper">
+                  <button type="button" data-delta="-15" aria-label="Togli 15 minuti a viaggio">−</button>
+                  <output>0 min</output>
+                  <button type="button" class="piu" data-delta="15" aria-label="Aggiungi 15 minuti a viaggio">+</button>
+                </div>
+              </div>
+              <div class="ora-riga" data-tipo="ordinario">
+                <div class="ora-testata"><b>Ordinario</b><span>40,00 € / h</span></div>
+                <div class="stepper">
+                  <button type="button" data-delta="-15" aria-label="Togli 15 minuti a ordinario">−</button>
+                  <output>0 min</output>
+                  <button type="button" class="piu" data-delta="15" aria-label="Aggiungi 15 minuti a ordinario">+</button>
+                </div>
+              </div>
+              <div class="ora-riga" data-tipo="urgenza">
+                <div class="ora-testata"><b>Urgenza</b><span>60,00 € / h</span></div>
+                <div class="stepper">
+                  <button type="button" data-delta="-15" aria-label="Togli 15 minuti a urgenza">−</button>
+                  <output>0 min</output>
+                  <button type="button" class="piu" data-delta="15" aria-label="Aggiungi 15 minuti a urgenza">+</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Passo materiali -->
+          <div data-vista-passo="1" hidden>
+            <label class="campo">
+              Cerca materiale
+              <input type="search" id="cerca-materiale" class="cerca" placeholder="Codice o descrizione" autocomplete="off">
+            </label>
+            <ul class="risultati" id="risultati-materiali"></ul>
+
+            <div class="blocco" style="margin-top:14px">
+              <div class="ora-testata"><b>Materiali usati</b><span id="totale-materiali">0,00 €</span></div>
+              <ul class="usati" id="materiali-usati"></ul>
+              <p class="vuoto" id="materiali-vuoto">Nessun materiale.</p>
+            </div>
+          </div>
+
+          <!-- Passo note e firma -->
+          <div data-vista-passo="2" hidden>
+            <label class="campo" for="note">
+              Note
+              <textarea id="note" placeholder="Cosa è stato fatto">Sostituita valvola di sicurezza 3 bar, impianto riportato a 1,4 bar. Vaso di espansione da controllare al prossimo passaggio.</textarea>
+            </label>
+
+            <label class="campo" for="firmatario" style="margin-top:12px">
+              Firmato da
+              <input id="firmatario" type="text" value="Sig.ra Rossi" autocomplete="off">
+            </label>
+
+            <div class="campo" style="margin-top:12px">
+              Firma del cliente
+              <canvas id="tela-firma" aria-label="Area per la firma del cliente"></canvas>
+              <button type="button" id="cancella-firma" style="height:44px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font-family:var(--testo);font-size:14px;cursor:pointer">
+                Cancella firma
+              </button>
+            </div>
+
+            <p class="messaggio" id="avviso-firma" style="margin-top:12px">
+              Senza firma il rapportino si chiude comunque, ma l'ufficio lo vede segnalato come non firmato.
+            </p>
+          </div>
+
+          <div id="esito"></div>
+        </div>
+
+        <div class="totale-barra">
+          <div class="totale-riga">
+            <span>Totale intervento</span>
+            <strong id="totale">0,00 €</strong>
+          </div>
+          <button type="button" class="pulsante-grande chiudi" id="pulsante-chiudi" disabled>Chiudi rapportino</button>
+        </div>
+      </div>
+
+      <div class="note-laterali">
+        <div class="nota">
+          <h3>Perché a passi</h3>
+          <p>
+            Ore, materiali, firma. Tre tocchi per cambiare passo, nessuno scorrimento lungo con le
+            mani sporche. Il totale resta fisso in fondo: il tecnico lo legge al cliente prima di
+            fargli firmare.
+          </p>
+        </div>
+        <div class="nota">
+          <h3>Il timer sopravvive al blocco schermo</h3>
+          <p>
+            Non è un contatore che avanza in memoria: salva l'orario di avvio e calcola i minuti
+            quando serve. Se il telefono si blocca o la scheda si chiude, il conteggio resta giusto.
+            Fermandolo, i minuti finiscono nelle ore ordinarie.
+          </p>
+        </div>
+        <div class="nota">
+          <h3>Tariffe applicate</h3>
+          <p>Le tre tariffe di vendita stanno in un'unica riga di configurazione, modificabile dal titolare.</p>
+          <ul class="tariffe">
+            <li><span>Ora di viaggio</span><b>30,00 €</b></li>
+            <li><span>Ora ordinaria</span><b>40,00 €</b></li>
+            <li><span>Ora di urgenza</span><b>60,00 €</b></li>
+          </ul>
+        </div>
+        <div class="nota">
+          <h3>Senza campo funziona uguale</h3>
+          <p>
+            In una cantina il rapportino si chiude comunque: resta in <code>IndexedDB</code> e parte
+            appena torna il segnale. Il vincolo sul database impedisce che un reinvio crei un
+            doppione.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ UFFICIO ============ -->
+  <section class="pannello" id="pannello-ufficio" hidden>
+    <div class="didascalia">
+      <h2>Tabellone del giorno</h2>
+      <p>Trascina un intervento in un'altra cella per cambiargli furgone e ora.</p>
+    </div>
+
+    <div class="barra-giorno">
+      <button type="button">← Giovedì 11</button>
+      <span class="data">Venerdì 12 settembre</span>
+      <button type="button">Sabato 13 →</button>
+      <button type="button" style="background:var(--verde);border-color:var(--verde);color:var(--ground)">+ Nuovo intervento</button>
+    </div>
+
+    <div class="da-assegnare" id="da-assegnare">
+      <strong>Da assegnare</strong>
+    </div>
+
+    <div class="scorrevole">
+      <div class="tabellone" id="tabellone"></div>
+    </div>
+
+    <div class="griglia-liste">
+      <div class="scheda">
+        <h3>In attesa di fatturazione</h3>
+        <table>
+          <thead>
+            <tr><th>Cliente</th><th>Tecnico</th><th class="num">Ore</th><th class="num">Totale</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Panificio Rossi S.r.l.<small>Valvola di sicurezza, 12 set</small></td>
+              <td>Luca Ferrari</td>
+              <td class="num">1,5</td>
+              <td class="num">88,00 €</td>
+            </tr>
+            <tr>
+              <td>Condominio Via Manzoni 14 <span class="pillola nonfirmato">Non firmato</span><small>Manutenzione caldaia, 11 set</small></td>
+              <td>Sara Colombo</td>
+              <td class="num">2,0</td>
+              <td class="num">104,50 €</td>
+            </tr>
+            <tr>
+              <td>Bianchi Marco<small>Pompa di calore, controllo gas, 11 set</small></td>
+              <td>Ivan Moretti</td>
+              <td class="num">3,25</td>
+              <td class="num">212,80 €</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="scheda">
+        <h3>Margine del mese — vista titolare</h3>
+        <table>
+          <thead>
+            <tr><th>Tecnico</th><th class="num">Ricavo</th><th class="num">Margine</th><th class="num">%</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Luca Ferrari</td><td class="num">4.180,00 €</td><td class="num">1.932,00 €</td><td class="num">46,2</td></tr>
+            <tr><td>Sara Colombo</td><td class="num">3.640,50 €</td><td class="num">1.588,20 €</td><td class="num">43,6</td></tr>
+            <tr><td>Ivan Moretti</td><td class="num">2.905,80 €</td><td class="num">1.041,30 €</td><td class="num">35,8</td></tr>
+            <tr><td>Dario Neri</td><td class="num">2.114,00 €</td><td class="num">806,40 €</td><td class="num">38,1</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SCADENZARIO ============ -->
+  <section class="pannello" id="pannello-scadenze" hidden>
+    <div class="didascalia">
+      <h2>Manutenzioni da richiamare</h2>
+      <p>La scadenza la calcola il database dall'ultima manutenzione, non l'applicazione.</p>
+    </div>
+
+    <div class="conta">
+      <div class="rosso"><strong>3</strong><span>Scaduti</span></div>
+      <div><strong>4</strong><span>In scadenza entro 30 giorni</span></div>
+      <div><strong>128</strong><span>Impianti seguiti</span></div>
+    </div>
+
+    <div class="scheda">
+      <table>
+        <thead>
+          <tr><th>Impianto</th><th>Cliente</th><th>Ultima</th><th>Scadenza</th><th></th></tr>
+        </thead>
+        <tbody id="corpo-scadenze"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <p class="piede">
+    Prototipo del gestionale termoidraulico · dati inventati, calcoli veri ·
+    tariffe 30/40/60 € per ora di viaggio, ordinaria, urgenza
+  </p>
+</div>
+
+<script>
+  'use strict';
+
+  const euro = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
+  const soldi = (v) => euro.format(v).replace(/ /g, ' ');
+
+  function oreTesto(minuti) {
+    if (minuti <= 0) return '0 min';
+    const ore = Math.floor(minuti / 60);
+    const resto = minuti % 60;
+    if (!ore) return resto + ' min';
+    if (!resto) return ore + ' h';
+    return ore + ' h ' + resto + ' min';
+  }
+
+  /* ---------- Commutatore di vista ---------- */
+
+  const pannelli = {
+    tecnico: document.getElementById('pannello-tecnico'),
+    ufficio: document.getElementById('pannello-ufficio'),
+    scadenze: document.getElementById('pannello-scadenze'),
+  };
+
+  document.querySelectorAll('.viste button').forEach((bottone) => {
+    bottone.addEventListener('click', () => {
+      document.querySelectorAll('.viste button').forEach((b) => {
+        b.setAttribute('aria-pressed', String(b === bottone));
+      });
+      Object.entries(pannelli).forEach(([nome, pannello]) => {
+        pannello.hidden = nome !== bottone.dataset.vista;
+      });
+    });
+  });
+
+  /* ---------- Stato del rapportino ---------- */
+
+  const tariffe = { viaggio: 30, ordinario: 40, urgenza: 60 };
+  const stato = { ore: { viaggio: 0, ordinario: 0, urgenza: 0 }, materiali: [], timerAvviatoIl: null, firma: false };
+
+  const listino = [
+    { id: 'm1', codice: 'VAL-SIC-3', descrizione: 'Valvola di sicurezza 3 bar', unita: 'pz', prezzo: 19.0 },
+    { id: 'm2', codice: 'VAL-SFE-12', descrizione: 'Valvola a sfera 1/2', unita: 'pz', prezzo: 11.0 },
+    { id: 'm3', codice: 'VAL-SFE-34', descrizione: 'Valvola a sfera 3/4', unita: 'pz', prezzo: 14.5 },
+    { id: 'm4', codice: 'VAL-TER-15', descrizione: 'Valvola termostatica 15 mm', unita: 'pz', prezzo: 29.0 },
+    { id: 'm5', codice: 'TUB-CU-15', descrizione: 'Tubo rame ricotto 15 mm', unita: 'm', prezzo: 7.5 },
+    { id: 'm6', codice: 'TUB-CU-18', descrizione: 'Tubo rame ricotto 18 mm', unita: 'm', prezzo: 9.2 },
+    { id: 'm7', codice: 'TUB-MU-16', descrizione: 'Tubo multistrato 16x2', unita: 'm', prezzo: 4.6 },
+    { id: 'm8', codice: 'RAC-90-15', descrizione: 'Curva 90 gradi 15 mm', unita: 'pz', prezzo: 2.8 },
+    { id: 'm9', codice: 'RAC-TE-15', descrizione: 'Raccordo a T 15 mm', unita: 'pz', prezzo: 4.1 },
+    { id: 'm10', codice: 'RAC-NIP-12', descrizione: 'Nipples ottone 1/2', unita: 'pz', prezzo: 2.4 },
+    { id: 'm11', codice: 'GUA-CAN-12', descrizione: 'Guarnizione canapa 1/2', unita: 'pz', prezzo: 0.9 },
+    { id: 'm12', codice: 'VAS-EXP-8', descrizione: 'Vaso espansione 8 litri', unita: 'pz', prezzo: 48.0 },
+    { id: 'm13', codice: 'POM-CIR-25', descrizione: 'Circolatore 25-40', unita: 'pz', prezzo: 149.0 },
+    { id: 'm14', codice: 'SON-NTC', descrizione: 'Sonda NTC caldaia', unita: 'pz', prezzo: 24.0 },
+    { id: 'm15', codice: 'SCA-PIA-20', descrizione: 'Scambiatore a piastre 20 elementi', unita: 'pz', prezzo: 128.0 },
+    { id: 'm16', codice: 'FIL-DEF-34', descrizione: 'Filtro defangatore 3/4', unita: 'pz', prezzo: 69.0 },
+    { id: 'm17', codice: 'GAS-R32-1', descrizione: 'Ricarica gas R32 per kg', unita: 'kg', prezzo: 35.0 },
+    { id: 'm18', codice: 'MAN-PRE-4', descrizione: 'Manometro 0-4 bar', unita: 'pz', prezzo: 17.5 },
+  ];
+
+  function totali() {
+    const ricavoOre = Object.entries(stato.ore).reduce((s, [tipo, min]) => s + (min / 60) * tariffe[tipo], 0);
+    const ricavoMateriali = stato.materiali.reduce((s, r) => s + r.quantita * r.prezzo, 0);
+    return { ricavoOre, ricavoMateriali, totale: ricavoOre + ricavoMateriali };
+  }
+
+  function disegna() {
+    document.querySelectorAll('.ora-riga').forEach((riga) => {
+      riga.querySelector('output').textContent = oreTesto(stato.ore[riga.dataset.tipo]);
+    });
+
+    const t = totali();
+    document.getElementById('totale').textContent = soldi(t.totale);
+    document.getElementById('totale-materiali').textContent = soldi(t.ricavoMateriali);
+
+    const minutiTotali = Object.values(stato.ore).reduce((s, m) => s + m, 0);
+    document.getElementById('pulsante-chiudi').disabled = minutiTotali === 0;
+
+    const elenco = document.getElementById('materiali-usati');
+    elenco.textContent = '';
+    stato.materiali.forEach((riga) => {
+      const voce = document.createElement('li');
+
+      const nome = document.createElement('div');
+      nome.className = 'nome';
+      const b = document.createElement('b');
+      b.textContent = riga.descrizione;
+      const small = document.createElement('small');
+      small.textContent = soldi(riga.quantita * riga.prezzo);
+      nome.append(b, small);
+
+      const meno = document.createElement('button');
+      meno.type = 'button';
+      meno.textContent = '−';
+      meno.setAttribute('aria-label', 'Riduci ' + riga.descrizione);
+      meno.addEventListener('click', () => cambiaQuantita(riga.id, -1));
+
+      const q = document.createElement('span');
+      q.className = 'q';
+      q.textContent = riga.quantita;
+
+      const piu = document.createElement('button');
+      piu.type = 'button';
+      piu.className = 'piu';
+      piu.textContent = '+';
+      piu.setAttribute('aria-label', 'Aumenta ' + riga.descrizione);
+      piu.addEventListener('click', () => cambiaQuantita(riga.id, 1));
+
+      voce.append(nome, meno, q, piu);
+      elenco.append(voce);
+    });
+    document.getElementById('materiali-vuoto').hidden = stato.materiali.length > 0;
+
+    document.getElementById('timer-lettura').textContent = oreTesto(minutiTimer());
+    const pulsante = document.getElementById('pulsante-timer');
+    if (stato.timerAvviatoIl) {
+      pulsante.textContent = 'Ferma timer';
+      pulsante.classList.remove('avvia');
+      pulsante.classList.add('ferma');
+    } else {
+      pulsante.textContent = 'Avvia timer';
+      pulsante.classList.add('avvia');
+      pulsante.classList.remove('ferma');
+    }
+
+    document.getElementById('avviso-firma').hidden = stato.firma;
+  }
+
+  function minutiTimer() {
+    if (!stato.timerAvviatoIl) return 0;
+    return Math.floor((Date.now() - stato.timerAvviatoIl) / 60000);
+  }
+
+  function cambiaQuantita(id, delta) {
+    const esistente = stato.materiali.find((r) => r.id === id);
+    const materiale = listino.find((m) => m.id === id);
+    const quantita = (esistente ? esistente.quantita : 0) + delta;
+    stato.materiali = stato.materiali.filter((r) => r.id !== id);
+    if (quantita > 0) {
+      stato.materiali.push({ id, descrizione: materiale.descrizione, quantita, prezzo: materiale.prezzo });
+    }
+    disegna();
+  }
+
+  /* Passi */
+  document.querySelectorAll('.passi button').forEach((bottone) => {
+    bottone.addEventListener('click', () => {
+      document.querySelectorAll('.passi button').forEach((b) => {
+        b.setAttribute('aria-pressed', String(b === bottone));
+      });
+      document.querySelectorAll('[data-vista-passo]').forEach((blocco) => {
+        blocco.hidden = blocco.dataset.vistaPasso !== bottone.dataset.passo;
+      });
+    });
+  });
+
+  /* Stepper ore */
+  document.querySelectorAll('.ora-riga .stepper button').forEach((bottone) => {
+    bottone.addEventListener('click', () => {
+      const tipo = bottone.closest('.ora-riga').dataset.tipo;
+      stato.ore[tipo] = Math.max(0, stato.ore[tipo] + Number(bottone.dataset.delta));
+      disegna();
+    });
+  });
+
+  /* Timer */
+  document.getElementById('pulsante-timer').addEventListener('click', () => {
+    if (stato.timerAvviatoIl) {
+      stato.ore.ordinario += minutiTimer();
+      stato.timerAvviatoIl = null;
+    } else {
+      stato.timerAvviatoIl = Date.now();
+    }
+    disegna();
+  });
+  setInterval(() => { if (stato.timerAvviatoIl) disegna(); }, 15000);
+
+  /* Ricerca materiali */
+  const campoCerca = document.getElementById('cerca-materiale');
+  const risultati = document.getElementById('risultati-materiali');
+
+  campoCerca.addEventListener('input', () => {
+    const termine = campoCerca.value.trim().toLowerCase();
+    risultati.textContent = '';
+    if (termine.length < 2) return;
+
+    listino
+      .filter((m) => m.descrizione.toLowerCase().includes(termine) || m.codice.toLowerCase().includes(termine))
+      .slice(0, 6)
+      .forEach((m) => {
+        const voce = document.createElement('li');
+        const bottone = document.createElement('button');
+        bottone.type = 'button';
+        bottone.setAttribute('aria-label', 'Aggiungi ' + m.descrizione);
+
+        const testo = document.createElement('span');
+        const b = document.createElement('b');
+        b.textContent = m.descrizione;
+        const small = document.createElement('small');
+        small.textContent = m.codice + ' · ' + soldi(m.prezzo) + ' / ' + m.unita;
+        testo.append(b, small);
+
+        const piu = document.createElement('span');
+        piu.textContent = '+';
+        piu.style.fontSize = '20px';
+        piu.style.color = 'var(--verde)';
+
+        bottone.append(testo, piu);
+        bottone.addEventListener('click', () => cambiaQuantita(m.id, 1));
+        voce.append(bottone);
+        risultati.append(voce);
+      });
+  });
+
+  /* Firma */
+  const tela = document.getElementById('tela-firma');
+  const contesto = tela.getContext('2d');
+
+  function preparaTela() {
+    const scala = window.devicePixelRatio || 1;
+    const larghezza = tela.clientWidth;
+    const altezza = tela.clientHeight;
+    tela.width = larghezza * scala;
+    tela.height = altezza * scala;
+    contesto.setTransform(scala, 0, 0, scala, 0, 0);
+    contesto.lineWidth = 2.4;
+    contesto.lineCap = 'round';
+    contesto.strokeStyle = '#101c21';
+    contesto.fillStyle = '#ffffff';
+    contesto.fillRect(0, 0, larghezza, altezza);
+  }
+
+  let disegnando = false;
+
+  tela.addEventListener('pointerdown', (evento) => {
+    tela.setPointerCapture(evento.pointerId);
+    const rettangolo = tela.getBoundingClientRect();
+    contesto.beginPath();
+    contesto.moveTo(evento.clientX - rettangolo.left, evento.clientY - rettangolo.top);
+    disegnando = true;
+  });
+
+  tela.addEventListener('pointermove', (evento) => {
+    if (!disegnando) return;
+    const rettangolo = tela.getBoundingClientRect();
+    contesto.lineTo(evento.clientX - rettangolo.left, evento.clientY - rettangolo.top);
+    contesto.stroke();
+  });
+
+  tela.addEventListener('pointerup', () => {
+    disegnando = false;
+    stato.firma = true;
+    disegna();
+  });
+
+  document.getElementById('cancella-firma').addEventListener('click', () => {
+    preparaTela();
+    stato.firma = false;
+    disegna();
+  });
+
+  /* Chiusura */
+  document.getElementById('pulsante-chiudi').addEventListener('click', () => {
+    const esito = document.getElementById('esito');
+    const t = totali();
+    const senzaRete = !navigator.onLine;
+    esito.textContent = '';
+
+    const messaggio = document.createElement('p');
+    messaggio.className = 'messaggio' + (senzaRete ? '' : ' fatto');
+    messaggio.textContent = senzaRete
+      ? 'Rete assente: rapportino da ' + soldi(t.totale) + ' messo in coda, parte appena torna il segnale.'
+      : 'Rapportino da ' + soldi(t.totale) + ' inviato in ufficio' + (stato.firma ? '.' : ', segnalato come non firmato.');
+    esito.append(messaggio);
+  });
+
+  /* ---------- Tabellone ufficio ---------- */
+
+  const tecnici = [
+    { id: 't1', nome: 'Luca Ferrari' },
+    { id: 't2', nome: 'Sara Colombo' },
+    { id: 't3', nome: 'Ivan Moretti' },
+    { id: 't4', nome: 'Dario Neri' },
+    { id: 't5', nome: 'Furgone 5' },
+  ];
+
+  const fasce = ['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+
+  const impegni = [
+    { id: 'i1', tecnico: 't1', fascia: '08:00', cliente: 'Panificio Rossi', dove: 'Via Industriale 8', cosa: 'Caldaia in blocco', priorita: 'urgente' },
+    { id: 'i2', tecnico: 't1', fascia: '11:00', cliente: 'Bar Centrale', dove: 'Corso Zanardelli 40', cosa: 'Perdita sotto il bancone', priorita: 'normale' },
+    { id: 'i3', tecnico: 't2', fascia: '08:00', cliente: 'Cond. Manzoni 14', dove: 'Via Manzoni 14', cosa: 'Manutenzione caldaia', priorita: 'normale', stato: 'chiuso' },
+    { id: 'i4', tecnico: 't2', fascia: '14:00', cliente: 'Bianchi Marco', dove: 'Via Sereno 3, Rezzato', cosa: 'Controllo pompa di calore', priorita: 'bassa' },
+    { id: 'i5', tecnico: 't3', fascia: '09:00', cliente: 'Officina Gandini', dove: 'Via Orzinuovi 22', cosa: 'Radiatori freddi al primo piano', priorita: 'normale' },
+    { id: 'i6', tecnico: 't3', fascia: '15:00', cliente: 'Studio Ferri', dove: 'Via Gramsci 9', cosa: 'Split che perde acqua', priorita: 'normale' },
+    { id: 'i7', tecnico: 't4', fascia: '10:00', cliente: 'Asilo Il Girasole', dove: 'Via Trieste 4', cosa: 'Termostati da tarare', priorita: 'bassa' },
+    { id: 'i8', tecnico: 't5', fascia: '07:00', cliente: 'Hotel Vittoria', dove: 'Piazza Vittoria 2', cosa: 'Scaldacqua fuori uso', priorita: 'urgente' },
+  ];
+
+  const nonAssegnati = [
+    { id: 'i9', tecnico: null, fascia: null, cliente: 'Tintoria Neri', dove: 'Via Milano 61', cosa: 'Preventivo caldaia industriale', priorita: 'normale' },
+    { id: 'i10', tecnico: null, fascia: null, cliente: 'Sig. Alberti', dove: 'Via Fura 18', cosa: 'Sostituzione miscelatore', priorita: 'bassa' },
+  ];
+
+  const tuttiGliImpegni = impegni.concat(nonAssegnati);
+
+  function cartaImpegno(impegno) {
+    const carta = document.createElement('div');
+    carta.className = 'impegno' + (impegno.priorita === 'urgente' ? ' urgente' : '') + (impegno.stato === 'chiuso' ? ' chiuso' : '');
+    carta.draggable = true;
+    carta.dataset.id = impegno.id;
+    carta.tabIndex = 0;
+
+    const cliente = document.createElement('b');
+    cliente.textContent = impegno.cliente;
+    const cosa = document.createElement('small');
+    cosa.textContent = impegno.cosa;
+    const dove = document.createElement('small');
+    dove.textContent = impegno.dove;
+
+    carta.append(cliente, cosa, dove);
+
+    if (impegno.stato === 'chiuso') {
+      const stato = document.createElement('small');
+      stato.textContent = 'Rapportino chiuso · 104,50 €';
+      carta.append(stato);
+    }
+
+    carta.addEventListener('dragstart', (evento) => {
+      evento.dataTransfer.setData('text/plain', impegno.id);
+      evento.dataTransfer.effectAllowed = 'move';
+    });
+
+    return carta;
+  }
+
+  function disegnaTabellone() {
+    const griglia = document.getElementById('tabellone');
+    griglia.textContent = '';
+
+    const angolo = document.createElement('div');
+    angolo.className = 'cella-testata';
+    angolo.textContent = 'Ora';
+    griglia.append(angolo);
+
+    tecnici.forEach((tecnico) => {
+      const testata = document.createElement('div');
+      testata.className = 'cella-testata';
+      testata.textContent = tecnico.nome;
+      griglia.append(testata);
+    });
+
+    fasce.forEach((fascia) => {
+      const ora = document.createElement('div');
+      ora.className = 'cella-ora';
+      ora.textContent = fascia;
+      griglia.append(ora);
+
+      tecnici.forEach((tecnico) => {
+        const cella = document.createElement('div');
+        cella.className = 'cella';
+        cella.dataset.tecnico = tecnico.id;
+        cella.dataset.fascia = fascia;
+
+        tuttiGliImpegni
+          .filter((i) => i.tecnico === tecnico.id && i.fascia === fascia)
+          .forEach((i) => cella.append(cartaImpegno(i)));
+
+        cella.addEventListener('dragover', (evento) => {
+          evento.preventDefault();
+          cella.classList.add('sopra');
+        });
+        cella.addEventListener('dragleave', () => cella.classList.remove('sopra'));
+        cella.addEventListener('drop', (evento) => {
+          evento.preventDefault();
+          cella.classList.remove('sopra');
+          const id = evento.dataTransfer.getData('text/plain');
+          const impegno = tuttiGliImpegni.find((i) => i.id === id);
+          if (!impegno) return;
+          impegno.tecnico = tecnico.id;
+          impegno.fascia = fascia;
+          disegnaTabellone();
+          disegnaDaAssegnare();
+        });
+
+        griglia.append(cella);
+      });
+    });
+  }
+
+  function disegnaDaAssegnare() {
+    const zona = document.getElementById('da-assegnare');
+    zona.textContent = '';
+    const titolo = document.createElement('strong');
+    titolo.textContent = 'Da assegnare';
+    zona.append(titolo);
+
+    const liberi = tuttiGliImpegni.filter((i) => !i.tecnico);
+    if (!liberi.length) {
+      const vuoto = document.createElement('span');
+      vuoto.style.fontSize = '13px';
+      vuoto.style.color = 'var(--muted)';
+      vuoto.textContent = 'Tutto assegnato.';
+      zona.append(vuoto);
+      return;
+    }
+    liberi.forEach((i) => zona.append(cartaImpegno(i)));
+  }
+
+  /* ---------- Scadenzario ---------- */
+
+  const impianti = [
+    { tipo: 'Caldaia Vaillant ecoTEC plus', matricola: 'VA-88120', cliente: 'Cond. Via Manzoni 14', dove: 'Via Manzoni 14, Brescia', ultima: '2025-08-04', scadenza: '2026-08-04' },
+    { tipo: 'Caldaia Junkers Cerapur', matricola: 'JU-41207', cliente: 'Officina Gandini', dove: 'Via Orzinuovi 22', ultima: '2025-07-19', scadenza: '2026-07-19' },
+    { tipo: 'Condizionatore Daikin Perfera 12', matricola: 'DK-55021', cliente: 'Bar Centrale', dove: 'Corso Zanardelli 40', ultima: '2025-09-02', scadenza: '2026-09-02' },
+    { tipo: 'Pompa di calore Mitsubishi Ecodan 8 kW', matricola: 'MI-70310', cliente: 'Bianchi Marco', dove: 'Via Sereno 3, Rezzato', ultima: '2025-09-28', scadenza: '2026-09-28' },
+    { tipo: 'Caldaia Riello Family', matricola: 'RI-22908', cliente: 'Asilo Il Girasole', dove: 'Via Trieste 4', ultima: '2025-10-05', scadenza: '2026-10-05' },
+    { tipo: 'Scaldacqua Ariston Velis', matricola: 'AR-13344', cliente: 'Hotel Vittoria', dove: 'Piazza Vittoria 2', ultima: '2026-02-11', scadenza: '2027-02-11' },
+  ];
+
+  function statoScadenza(scadenza, oggi) {
+    const giorno = (d) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    const bersaglio = giorno(new Date(scadenza + 'T00:00:00Z'));
+    const adesso = giorno(oggi);
+    if (bersaglio < adesso) return 'scaduto';
+    return (bersaglio - adesso) / 86400000 <= 30 ? 'scadenza' : 'ok';
+  }
+
+  function disegnaScadenze() {
+    const corpo = document.getElementById('corpo-scadenze');
+    const oggi = new Date();
+    corpo.textContent = '';
+
+    const formato = new Intl.DateTimeFormat('it-IT');
+
+    impianti
+      .slice()
+      .sort((a, b) => a.scadenza.localeCompare(b.scadenza))
+      .forEach((impianto) => {
+        const riga = document.createElement('tr');
+
+        const primo = document.createElement('td');
+        primo.textContent = impianto.tipo;
+        const matricola = document.createElement('small');
+        matricola.textContent = 'Matricola ' + impianto.matricola;
+        primo.append(matricola);
+
+        const secondo = document.createElement('td');
+        secondo.textContent = impianto.cliente;
+        const dove = document.createElement('small');
+        dove.textContent = impianto.dove;
+        secondo.append(dove);
+
+        const terzo = document.createElement('td');
+        terzo.className = 'num';
+        terzo.textContent = formato.format(new Date(impianto.ultima + 'T00:00:00Z'));
+
+        const quarto = document.createElement('td');
+        const stato = statoScadenza(impianto.scadenza, oggi);
+        const pillola = document.createElement('span');
+        pillola.className = 'pillola ' + stato;
+        const giorni = Math.round(
+          (Date.UTC(oggi.getUTCFullYear(), oggi.getUTCMonth(), oggi.getUTCDate()) -
+            new Date(impianto.scadenza + 'T00:00:00Z').getTime()) / 86400000,
+        );
+        pillola.textContent =
+          stato === 'scaduto'
+            ? 'Scaduto da ' + giorni + ' giorni'
+            : stato === 'scadenza'
+              ? 'In scadenza il ' + formato.format(new Date(impianto.scadenza + 'T00:00:00Z'))
+              : formato.format(new Date(impianto.scadenza + 'T00:00:00Z'));
+        quarto.append(pillola);
+
+        const quinto = document.createElement('td');
+        const bottone = document.createElement('button');
+        bottone.type = 'button';
+        bottone.textContent = 'Registrata oggi';
+        bottone.style.cssText =
+          'height:38px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font-family:var(--testo);font-size:13px;cursor:pointer';
+        bottone.addEventListener('click', () => {
+          const adesso = new Date();
+          impianto.ultima = adesso.toISOString().slice(0, 10);
+          const prossima = new Date(Date.UTC(adesso.getUTCFullYear() + 1, adesso.getUTCMonth(), adesso.getUTCDate()));
+          impianto.scadenza = prossima.toISOString().slice(0, 10);
+          disegnaScadenze();
+        });
+        quinto.append(bottone);
+
+        riga.append(primo, secondo, terzo, quarto, quinto);
+        corpo.append(riga);
+      });
+  }
+
+  preparaTela();
+  disegna();
+  disegnaTabellone();
+  disegnaDaAssegnare();
+  disegnaScadenze();
+</script>
+</body>
+</html>
